@@ -88,11 +88,14 @@ func main() {
 	// log.Fatal(s.ListenAndServeTLS("./certs/mutating-test.pem", "./certs/mutating-test.key"))
 
 	http.HandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
+		log.Println("hi test")
 		fmt.Fprint(w, "Hello World") //responsewriter에 해당 문자를 보내라
 	})
-	err := http.ListenAndServeTLS(":8443", "./webhook-server-tls.crt", "./webhook-server-tls.key", nil)
+	err := http.ListenAndServeTLS(":8443", "./server.crt", "./server.key", nil)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
+	}else{
+		log.Println("hi test - in")
 	}
 
 }

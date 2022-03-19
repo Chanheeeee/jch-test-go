@@ -7,21 +7,19 @@ RUN apk update
 RUN apk add --no-cache bash
 WORKDIR /build
 COPY . .
-RUN ls
+
 #COPY go.mod main.go ./
 RUN go mod download
 RUN go build -o main .
 
 WORKDIR /dist
-
 RUN cp /build/main .
-RUN ls
-RUN cp /build/certs/webhook-server-tls.crt .
-RUN cp /build/certs/webhook-server-tls.key .
+RUN cp /build/cert/server.crt .
+RUN cp /build/cert/server.key .
 
 FROM scratch
 COPY --from=builder /dist/main .
-COPY --from=builder /dist/webhook-server-tls.crt .
-COPY --from=builder /dist/webhook-server-tls.key .
+COPY --from=builder /dist/server.crt .
+COPY --from=builder /dist/server.key .
 
 ENTRYPOINT ["/main"]

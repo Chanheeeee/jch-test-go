@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: webhook-mutate
-  namespace: kakaobank
+  namespace: default
   labels:
     app: webhook-pod-mutate
 spec:
@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: mutator
-          image: public.ecr.aws/p4g1u1f9/jch-mutating-test:v3
+          image: public.ecr.aws/p4g1u1f9/jch-mutating-test:v5
           imagePullPolicy: Always
           resources:
             limits:
@@ -26,11 +26,11 @@ spec:
             requests:
               cpu: 200m
               memory: 64Mi
-          volumeMounts:
-          - name: webhook-tls
-            mountPath: /run/secrets/tls
-            readOnly: true
-      volumes:
-      - name: webhook-tls
-        secret:
-          secretName: webhook-certs
+      #     volumeMounts:
+      #     - name: webhook-tls
+      #       mountPath: /run/secrets/tls
+      #       readOnly: true
+      # volumes:
+      # - name: webhook-tls
+      #   secret:
+      #     secretName: webhook-certs
