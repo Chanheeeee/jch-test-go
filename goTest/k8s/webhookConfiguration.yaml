@@ -1,0 +1,20 @@
+
+# 웹훅으로 보내야 하는 리소스 요청을 k8에 알려주는 역할
+apiVersion: admissionregistration.k8s.io/v1beta1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: pod-mutating
+webhooks:
+  - name: mutating-test.kakaobank.svc.cluster.local
+    clientConfig: # admission controller server에 대한 구성
+      service: ### admission Review요청을 보낼 서비스
+        name: mutating-test # admission controller server 의 서비스명
+        namespace: kakaobank # 내 admission controller server 가 어디있는지
+        path: "/test" # admission controller가 이 웹훅 요청을 수신할 경로
+      caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUMyakNDQWNJQ0NRQzJEaHlQUndpRndUQU5CZ2txaGtpRzl3MEJBUXNGQURBdk1TMHdLd1lEVlFRRERDUkIKWkcxcGMzTnBiMjRnUTI5dWRISnZiR3hsY2lCWFpXSm9iMjlySUVSbGJXOGdRMEV3SGhjTk1qSXdNekU1TURVdwpNak13V2hjTk1qSXdOREU0TURVd01qTXdXakF2TVMwd0t3WURWUVFERENSQlpHMXBjM05wYjI0Z1EyOXVkSEp2CmJHeGxjaUJYWldKb2IyOXJJRVJsYlc4Z1EwRXdnZ0VpTUEwR0NTcUdTSWIzRFFFQkFRVUFBNElCRHdBd2dnRUsKQW9JQkFRREZBZjYrK2RHYkl6YkhKZFRqT2NCUFZCd0NxRlZFNDk5RjlhSjZYTTIyVHVJaFJUY1RxenROSzFETApLeDBDdjhLQTAwT3M4NmkyN0hkVHlGd3ZFR29nTmVTQU8xTGlJTWo1a0l0TmtsaU00TjZiL0t0cFNXYUhibE94CmJYOHd2WjMwem8za0c0K3I0ejZjR0lySlorMmFlcUNodzl0dEpJaysvVkkyU2FMUlJzNm9DRXNwU1VpZkE5MnoKWVFxYUVzK3ZaeW1XcVNCV3VOeTRpT1NxSk1rRGR0dklOTFY4MDFyZ2ZxYjVZZ2hzYjRuNHVCQnNkbUF1WWpNYgp1c1dxQjRwTFpDM21rL05jcVR1ck1lSkFVYUNwWjZWYUwwTjdSdDIvNldSeTlFR1BOVEVQNG45UEhBWVFaMkN1CjEvRWN2Ujcza00rTGFTei81YUVhY2hieWFKTnpBZ01CQUFFd0RRWUpLb1pJaHZjTkFRRUxCUUFEZ2dFQkFHTzUKa0hmMStaYko4Y2VHbTczNE9FZUxxVHlFcldNZXM2Q1N5WXRidXJVLzUwWkNWMjhwaFlsbnJrZUEvWnIzUHRkVwpKU0xucUZLa2M1N1VnK1JJVXIyTWRpL2xQNDdZSmw4UWppai91dnN3RFlzQ0c5aGgwRmY0QytDM2R0VUZjSmtWCnJJUjZyS1NmVS9MbzdiVjdZb0ZXM0w2UGN1Q3YrSWVpc2F5SW5nNTJkRG5CYm80bkRuaE5peGwwd1FRUEdEMzQKYXhJVGZNdkdnb090WTZ6OGZTMklWVnRGeFg4TUkyZkhmdlVrS2Jtc1BKRElRWkhDSjFmMEcyYUJGZGFXcE5mMgpBckh5SDBOdGJjSlJsUmwvWGpld091RHpYN3dYNHh4MmZ5VmRDOWZsVHNTYnRxTXZnMFR2NkRqM0pBNHBZTkhpCm9CV1I5ckkvRkNmc2NoOWE2b289Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+    rules: # Pod생성시에 이 작업을 수행하겠다.
+      - operations: ["CREATE"]
+        apiGroups: [""]
+        apiVersions: ["v1"]
+        resources: ["pods"]
+    #failurePolicy: Ignore
