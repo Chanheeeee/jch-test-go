@@ -17,14 +17,14 @@ spec:
     spec:
       containers:
         - name: mutator
-          image: public.ecr.aws/p4g1u1f9/jch-mutating-test:v5
+          image: public.ecr.aws/p4g1u1f9/jch-mutating-test:v29
           imagePullPolicy: Always
           resources:
             limits:
-              cpu: 300m
+              cpu: 150m
               memory: 64Mi
             requests:
-              cpu: 200m
+              cpu: 150m
               memory: 64Mi
       #     volumeMounts:
       #     - name: webhook-tls

@@ -10,7 +10,7 @@ COPY . .
 
 #COPY go.mod main.go ./
 RUN go mod download
-RUN go build -o main .
+RUN go build -o main cmd/mutating-webhook/main.go
 
 WORKDIR /dist
 RUN cp /build/main .
