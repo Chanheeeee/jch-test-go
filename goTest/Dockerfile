@@ -1,3 +1,6 @@
+################
+# GO BUILDER STAGE
+################
 FROM golang:alpine AS builder
 ENV GO111MODULE=on \
     CGO_ENABLED=0 \
@@ -12,6 +15,9 @@ COPY . .
 RUN go mod download
 RUN go build -o main cmd/mutating-webhook/main.go
 
+################
+# GO API STAGE
+################
 WORKDIR /dist
 RUN cp /build/main .
 RUN cp /build/cert/server.crt .
@@ -22,4 +28,5 @@ COPY --from=builder /dist/main .
 COPY --from=builder /dist/server.crt .
 COPY --from=builder /dist/server.key .
 
+EXPOSE 8443
 ENTRYPOINT ["/main"]

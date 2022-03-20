@@ -1,113 +1,117 @@
 package handler
 
 import (
-	"go-docker/internal/model"
-	"go-docker/internal/controller"
-	v1beta1 "k8s.io/api/admission/v1beta1"
-	"io/ioutil"
-	"net/http"
-	appsv1 "k8s.io/api/apps/v1"
-	"log"
-	"fmt"
 	"encoding/json"
+	log "github.com/sirupsen/logrus"
+	"go-docker/internal/controller"
+	"go-docker/internal/model"
+	"io/ioutil"
+	"k8s.io/api/admission/v1beta1"
+	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"net/http"
 )
 
-// 이 부분을 라우터로 이동?
-func NewHandler() http.Handler {
-	log.Println("[IN] newHandler")
-	mux := http.NewServeMux()
-	mux.HandleFunc("/mutate", mutateHandler)
+type Handler struct {
+	controller *controller.Controller
+}
 
-	return mux
+func NewHandler() *Handler{
+	return &Handler{
+		controller: &controller.Controller{},
+	}
 }
 
 //mutating Handler
-func mutateHandler(w http.ResponseWriter, r *http.Request) {
-
-	log.Println("[IN] mutateHandler")
-	defer r.Body.Close()
-
+//log.Println("[IN] mutateHandler")
+//defer r.Body.Close()
+func (h Handler) MutateHandler(w http.ResponseWriter, r *http.Request) {
 	admReview := v1beta1.AdmissionReview{}
 
-	body, err := ioutil.ReadAll(r.Body) 
+	deployment, err := getDeploymentFromBody(r, &admReview)
 	if err != nil {
-		FailedResponse(admReview, err)
-		return
+		FailedResponse(w, admReview, err)
 	}
 
-	if err := json.Unmarshal(body, &admReview); err != nil {
-		
-		log.Printf("@@@@admReview error: %s\n", err)
-		FailedResponse(admReview, err)
-		return
-	}
-	log.Printf("admReview: %s\n", admReview)
-
-	ar := admReview.Request
-	log.Printf("ar.UID: %s\n", ar.UID)
-
-	var deployment appsv1.Deployment
-	if ar != nil {
-		if err := json.Unmarshal(ar.Object.Raw, &deployment); err != nil {
-			log.Printf("@@@@Couldn't deployment unmarshall raw object: %s\n", err)
-			return
-		}
-	}
-
-	patchList, err := controller.RequestMutate(deployment) //response객체만들때 필요한 값 가져옴
+	patchList, err := h.controller.Mutate(deployment) //response객체만들때 필요한 값 가져옴
 	if err != nil {
-		FailedResponse(admReview, err)
+		FailedResponse(w, admReview, err)
 		return
 	}
 
-	admReviewResult, err := SuccessResponse(admReview, patchList)
-	if err != nil {
-		FailedResponse(admReview, err)
-		return
-	}
-
-	responseAdminReview := []byte{}
-	responseAdminReview, err = json.Marshal(admReviewResult)
-	log.Printf("@@@@@@@responseBody: %s\n", responseAdminReview)
-
-	
-	//w.WriteHeader(http.StatusOK)
-	//w.Write(responseAdminReview)
-	fmt.Fprint(w, responseAdminReview)
+	SuccessResponse(w, admReview, patchList)
 }
 
-
-
-
-func SuccessResponse(admissionReview v1beta1.AdmissionReview, patch []model.JSONPatchEntry) (*v1beta1.AdmissionReview, error) {
-	patchBytes, err := json.Marshal(&patch)
+func getDeploymentFromBody(r *http.Request, admReview *v1beta1.AdmissionReview) (*appsv1.Deployment, error) {
+	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		return nil, err
 	}
 
-	return &v1beta1.AdmissionReview{
+	if err := json.Unmarshal(body, &admReview); err != nil {
+		return nil, err
+	}
+
+	var deployment appsv1.Deployment
+	if admReview.Request != nil {
+		if err := json.Unmarshal(admReview.Request.Object.Raw, &deployment); err != nil {
+			log.Printf("@@@@Couldn't deployment unmarshall raw object: %s\n", err)
+			return nil, err
+		}
+	}
+
+	return &deployment, nil
+}
+
+func SuccessResponse(w http.ResponseWriter, admissionReview v1beta1.AdmissionReview, patch []model.JSONPatchEntry) {
+	patchBytes, err := json.Marshal(&patch)
+	if err != nil {
+		log.Errorf("Failed Marshal: %v", err)
+	}
+
+	admReview := &v1beta1.AdmissionReview{
 		TypeMeta: admissionReview.TypeMeta,
 		Response: &v1beta1.AdmissionResponse{
 			UID:       admissionReview.Request.UID,
 			Allowed:   true,
 			Patch:     patchBytes,
 			PatchType: func() *v1beta1.PatchType {
-				 			pt := v1beta1.PatchTypeJSONPatch
-				 			return &pt
-				 		}(),
+				pt := v1beta1.PatchTypeJSONPatch
+				return &pt
+			}(),
 			Result:	   &metav1.Status{Status: "Success",},
 		},
-	}, nil
+	}
+
+	admReviewResult, err := json.Marshal(admReview)
+	if err != nil {
+		log.Errorf("Failed Marshal: %v", err)
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(admReviewResult)
 }
 
-func FailedResponse(admissionReview v1beta1.AdmissionReview, err error) *v1beta1.AdmissionReview {
-	return &v1beta1.AdmissionReview{
+func FailedResponse(w http.ResponseWriter, admissionReview v1beta1.AdmissionReview, err error) {
+	log.Printf("Error handling webhook request: %v", err)
+
+	admReview := &v1beta1.AdmissionReview{
 		TypeMeta: admissionReview.TypeMeta,
 		Response: &v1beta1.AdmissionResponse{
 			UID:     admissionReview.Request.UID,
 			Allowed: false,
 			Result:  &metav1.Status{Message: err.Error()},
 		},
+	}
+
+	admReviewResult, err := json.Marshal(admReview)
+	if err != nil {
+		log.Errorf("Failed Marshal: %v", err)
+	}
+
+	w.WriteHeader(http.StatusInternalServerError)
+	_, writeErr := w.Write(admReviewResult)
+	if writeErr != nil {
+		log.Printf("Could not write response: %v", writeErr)
 	}
 }
