@@ -16,12 +16,6 @@ type Handler struct {
 	controller *controller.Controller
 }
 
-func NewHandler() *Handler{
-	return &Handler{
-		controller: &controller.Controller{},
-	}
-}
-
 //mutating Handler
 //log.Println("[IN] mutateHandler")
 //defer r.Body.Close()
@@ -30,16 +24,16 @@ func (h Handler) MutateHandler(w http.ResponseWriter, r *http.Request) {
 
 	deployment, err := getDeploymentFromBody(r, &admReview)
 	if err != nil {
-		FailedResponse(w, admReview, err)
+		failedResponse(w, admReview, err)
 	}
 
 	patchList, err := h.controller.Mutate(deployment) //response객체만들때 필요한 값 가져옴
 	if err != nil {
-		FailedResponse(w, admReview, err)
+		failedResponse(w, admReview, err)
 		return
 	}
 
-	SuccessResponse(w, admReview, patchList)
+	successResponse(w, admReview, patchList)
 }
 
 func getDeploymentFromBody(r *http.Request, admReview *v1beta1.AdmissionReview) (*appsv1.Deployment, error) {
@@ -63,7 +57,7 @@ func getDeploymentFromBody(r *http.Request, admReview *v1beta1.AdmissionReview) 
 	return &deployment, nil
 }
 
-func SuccessResponse(w http.ResponseWriter, admissionReview v1beta1.AdmissionReview, patch []model.JSONPatchEntry) {
+func successResponse(w http.ResponseWriter, admissionReview v1beta1.AdmissionReview, patch []model.JSONPatchEntry) {
 	patchBytes, err := json.Marshal(&patch)
 	if err != nil {
 		log.Errorf("Failed Marshal: %v", err)
@@ -92,7 +86,7 @@ func SuccessResponse(w http.ResponseWriter, admissionReview v1beta1.AdmissionRev
 	w.Write(admReviewResult)
 }
 
-func FailedResponse(w http.ResponseWriter, admissionReview v1beta1.AdmissionReview, err error) {
+func failedResponse(w http.ResponseWriter, admissionReview v1beta1.AdmissionReview, err error) {
 	log.Printf("Error handling webhook request: %v", err)
 
 	admReview := &v1beta1.AdmissionReview{

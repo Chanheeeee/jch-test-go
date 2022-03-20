@@ -7,20 +7,18 @@ import (
 )
 
 type Router struct{
-	handler deploymentHandler.Handler
+	handler *deploymentHandler.Handler
 }
 
 func NewRouter() *Router{
 	return &Router{
-		handler: deploymentHandler.Handler{},
+		handler: &deploymentHandler.Handler{},
 	}
 }
 
 func (r Router) InitDeploymentRouter() {
-	handler := deploymentHandler.NewHandler()
-
 	mux := http.NewServeMux()
-	mux.HandleFunc("/mutate", handler.MutateHandler)
+	mux.HandleFunc("/mutate", r.handler.MutateHandler)
 
 	err := http.ListenAndServeTLS(":8443", "./server.crt", "./server.key", mux)
 	if err != nil {
